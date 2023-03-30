@@ -1,0 +1,14 @@
+#app {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-content: center;
+  gap: 20px;
+}
+
+body {
+  margin: 0;
+  background-color: #2f3242;
+  font-family: "Courier New", Courier, monospace;
+  color: white;
+}
