@@ -2,7 +2,7 @@
 export default {
   name: "News",
 
-  props: ["post"],
+  props: ["post", "addFavorite", "favorites"],
 
   data() {
     return {
@@ -14,14 +14,40 @@ export default {
     };
   },
 
-  methods: {},
+  methods: {
+    handleAddFavorite(event) {
+      if (event.target.classList.length === 1) {
+        this.addFavorite(this.post, "add");
+      } else {
+        this.addFavorite(this.post);
+      }
+      event.target.classList.toggle("active");
+    },
+  },
+  computed: {
+    checkFavorites() {
+      return this.favorites?.some((item) => {
+        console.log(item.id, this.post.id);
+        return item.id === this.post.id;
+      });
+    },
+  },
 };
 </script>
 
 <template>
   <div class="newsElement">
     <a :href="pageUrl">{{ title }}</a>
-    <p>{{ new Date(published).toDateString() }}</p>
+    <div class="head">
+      <span id="date">{{ new Date(published).toDateString() }}</span>
+      <div>
+        <span
+          class="fav"
+          @click="handleAddFavorite"
+          :class="checkFavorites ? 'active' : ''"
+        ></span>
+      </div>
+    </div>
     <img v-if="image" :src="image" alt="image" />
     <div style="text-align: justify">
       <span v-html="content"></span>
@@ -48,7 +74,7 @@ a {
   font-weight: 800;
 }
 
-p {
+#date {
   font-size: 12px;
   line-height: 15px;
   color: aqua;
@@ -67,5 +93,67 @@ img {
 span {
   font-size: 14px;
   text-align: justify;
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  margin: 10px;
+}
+
+.fav {
+  width: 18px;
+  height: 18px;
+  position: relative;
+  cursor: pointer;
+}
+.fav:before,
+.fav:after {
+  content: "";
+  position: absolute;
+  display: block;
+  border-top-left-radius: 12px;
+  background-color: gray;
+}
+.fav:before {
+  border-bottom-left-radius: 12px;
+  width: inherit;
+  height: 12px;
+  top: 6px;
+  left: 0;
+}
+.fav:after {
+  width: 12px;
+  top: 0;
+  left: 6px;
+  height: inherit;
+  border-top-right-radius: 12px;
+}
+.active {
+  width: 18px;
+  height: 18px;
+  position: relative;
+}
+.active:before,
+.active:after {
+  content: "";
+  position: absolute;
+  display: block;
+  border-top-left-radius: 12px;
+  background-color: red;
+}
+.active:before {
+  border-bottom-left-radius: 12px;
+  width: inherit;
+  height: 12px;
+  top: 6px;
+  left: 0;
+}
+.active:after {
+  width: 12px;
+  top: 0;
+  left: 6px;
+  height: inherit;
+  border-top-right-radius: 12px;
 }
 </style>
