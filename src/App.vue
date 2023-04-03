@@ -43,15 +43,13 @@ export default {
     });
     this.favorits = JSON.parse(initialValue) ? JSON.parse(initialValue) : [];
     this.error = this.post = null;
-    this.loading = true;
     this.fetchData();
-    this.loading = false;
     window.addEventListener("scroll", this.handleScroll);
   },
 
   methods: {
     async fetchData() {
-      console.log(this.category);
+      this.loading = true;
       const URL = `https://newsapi.org/v2/top-headlines?category=${
         this.categories[this.category]
       }&page=${this.page}&pageSize=${this.pageSize}&language=${
@@ -73,11 +71,12 @@ export default {
           if (data.totalResults === 0) {
             this.error = `Data not found`;
           }
-          console.log(URL);
         })
         .catch((error) => {
           this.error = error;
-          console.log(error);
+        })
+        .finally(() => {
+          this.loading = false;
         });
     },
 
