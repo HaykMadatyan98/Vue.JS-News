@@ -24,9 +24,10 @@ export default {
       event.target.classList.toggle("active");
     },
   },
+
   computed: {
     checkFavorites() {
-      return this.favorites?.some((item) => {
+      return this.$store.state.favorits?.some((item) => {
         return item.id === this.post.id;
       });
     },

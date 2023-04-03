@@ -1,7 +1,7 @@
 <script>
 import News from "./components/News.vue";
 import Loading from "./components/Loading.vue";
-import axios from "axios";
+import { mapState } from "vuex";
 
 export default {
   name: "App",
@@ -12,107 +12,73 @@ export default {
   },
 
   data() {
-    return {
-      loading: false,
-      error: null,
-      posts: [],
-      allPosts: {},
-      favorits: [],
-      page: 1,
-      pageSize: 12,
-      language: "en",
-      categories: [
-        "Business",
-        "Entertainment",
-        "General",
-        "Health",
-        "Science",
-        "Sports",
-        "Technology",
-      ],
-      category: 0,
-      showFavorites: false,
-      totalResults: 0,
-    };
+    return {};
   },
 
   created() {
-    const initialValue = localStorage.getItem("favorites");
-    this.categories.forEach((item) => {
-      this.allPosts[item] = [];
+    this.$store.commit("setLoading", true);
+    const storageData = JSON.parse(localStorage.getItem("favorites")) || [];
+    this.$store.commit("setError", null);
+    this.$store.commit("setCurrentPosts", null);
+    this.$store.commit("setFavorites", storageData);
+    const categoriesObj = {};
+    this.$store.state.categories.forEach((item) => {
+      categoriesObj[item] = [];
     });
-    this.favorits = JSON.parse(initialValue) ? JSON.parse(initialValue) : [];
-    this.error = this.post = null;
-    this.loading = true;
-    this.fetchData();
-    this.loading = false;
+    this.$store.commit("setAllPosts", categoriesObj);
+    this.$store.dispatch("fetchData");
     window.addEventListener("scroll", this.handleScroll);
   },
 
   methods: {
-    async fetchData() {
-      const URL = `https://newsapi.org/v2/top-headlines?category=${
-        this.categories[this.category]
-      }&page=${this.page}&pageSize=${this.pageSize}&language=${
-        this.language
-      }&apiKey=67e83e28725a4c3fb7566013ff4fff39`;
-      await axios
-        .get(URL)
-        .then(({ data }) => {
-          if (this.page === 1) {
-            this.allPosts[this.categories[this.category]] = [];
-          }
-          this.allPosts[this.categories[this.category]].push(...data.articles);
-          this.allPosts[this.categories[this.category]].forEach(
-            (item, index) =>
-              (item.id = `${index}-${this.categories[this.category]}`)
-          );
-          this.posts = [...this.allPosts[this.categories[this.category]]];
-          this.totalResults = data.totalResults;
-          if (data.totalResults === 0) {
-            this.error = `Data not found`;
-          }
-        })
-        .catch((error) => {
-          this.error = error;
-        });
-    },
-
     handleScroll() {
-      const scrollY = window.scrollY;
-      const visibleHeight = window.innerHeight;
-      const pageHeight = document.documentElement.scrollHeight;
-
-      if (scrollY + visibleHeight >= pageHeight) {
-        this.page = this.page + 1;
-        if (this.page < 8) {
-          this.fetchData();
+      if (!this.$store.state.isShowFavorites) {
+        const scrollY = window.scrollY;
+        const visibleHeight = window.innerHeight;
+        const pageHeight = document.documentElement.scrollHeight;
+        if (scrollY + visibleHeight >= pageHeight) {
+          this.$store.commit("setPage", this.$store.state.page + 1);
+          if (this.$store.state.page < 8) {
+            this.$store.dispatch("fetchData");
+          }
         }
       }
     },
 
     addFavorite(data, action) {
       if (action) {
-        this.favorits.push(data);
+        this.$store.commit("addFavorites", data);
       } else {
-        this.favorits = this.favorits.filter((item) => item.id !== data.id);
-        if (this.showFavorites) {
-          this.posts = [...this.favorits];
+        this.$store.commit("deleteFavorites", data.id);
+        if (this.$store.state.isShowFavorites) {
+          this.$store.commit("setCurrentPosts", this.$store.state.favorits);
         }
       }
-      this.favorits.sort((a, b) => a.id - b.id);
-      localStorage.setItem("favorites", JSON.stringify(this.favorits));
+      localStorage.setItem(
+        "favorites",
+        JSON.stringify(this.$store.state.favorits)
+      );
     },
 
-    changeData() {
-      this.page = 1;
-      this.fetchData();
+    changeData(event) {
+      this.$store.commit("showFavorites", false);
+      this.$store.commit("setLoading", true);
+      this.$store.commit("setCategory", event.target.value);
+      this.$store.commit("setPage", 1);
+      this.$store.dispatch("fetchData");
     },
+
     showOnlyFavorits() {
-      this.showFavorites = !this.showFavorites;
-      this.posts = this.showFavorites
-        ? this.favorits
-        : this.allPosts[this.categories[this.category]];
+      this.$store.commit("showFavorites", !this.$store.state.isShowFavorites);
+      this.$store.commit(
+        "setCurrentPosts",
+        this.$store.state.isShowFavorites
+          ? this.$store.state.favorits
+          : this.$store.state.allPosts[
+              this.$store.state.categories[this.$store.state.category]
+            ]
+      );
+      console.log(this.$store.state.posts);
     },
   },
 };
@@ -120,28 +86,36 @@ export default {
 
 <template>
   <div class="header">
-    <select v-if="!loading" v-model="category" @change="changeData">
-      <option v-for="(item, index) in categories" :key="index" :value="index">
+    <select @change="changeData">
+      <option
+        v-for="(item, index) in this.$store.state.categories"
+        :key="index"
+        :value="index"
+      >
         {{ item }}
       </option>
     </select>
     <div class="totalFavorits" @click="showOnlyFavorits">
-      <span>{{ favorits.length }}</span>
+      <span>{{ this.$store.state.favorits.length }}</span>
     </div>
   </div>
-  <div v-if="loading" class="lds-roller">
+
+  <div v-if="this.$store.state.loading" class="lds-roller">
     <Loading />
   </div>
 
-  <div v-else-if="error" class="error">{{ error }}</div>
+  <div v-if="this.$store.state.error" class="error">{{ error }}</div>
 
-  <div v-else-if="posts" class="container">
+  <div
+    v-else-if="this.$store.state.posts && !this.$store.state.loading"
+    class="container"
+  >
     <News
-      v-for="elem in posts"
+      v-for="elem in this.$store.getters.getPosts"
       :post="elem"
       :key="elem.id"
       @addFavorite="addFavorite"
-      :favorites="favorits"
+      :favorites="this.$store.state.favorits"
     />
   </div>
 </template>
