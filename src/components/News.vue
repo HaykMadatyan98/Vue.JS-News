@@ -27,7 +27,6 @@ export default {
   computed: {
     checkFavorites() {
       return this.favorites?.some((item) => {
-        console.log(item.id, this.post.id);
         return item.id === this.post.id;
       });
     },
